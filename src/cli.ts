@@ -91,11 +91,9 @@ async function main(): Promise<void> {
   });
 }
 
-const isDirectRun =
-  process.argv[1] &&
-  import.meta.url.endsWith(process.argv[1].replace(/.*\//, ""));
+const isTest = process.env["VITEST"] !== undefined;
 
-if (isDirectRun) {
+if (!isTest) {
   main().catch((err) => {
     console.error(err);
     process.exit(1);
