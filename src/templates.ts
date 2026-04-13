@@ -1,4 +1,9 @@
-import styles from "./style.css";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const styles = readFileSync(join(__dirname, "style.css"), "utf-8");
 
 export interface DirEntry {
   name: string;

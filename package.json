@@ -7,7 +7,7 @@
     "servmark": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && cp src/style.css dist/style.css",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest"
