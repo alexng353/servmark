@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { logger } from "hono/logger";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join, resolve, relative, extname, normalize } from "node:path";
 import { createReadStream } from "node:fs";
@@ -76,6 +77,7 @@ async function findMarkdownFiles(rootDir: string): Promise<string[]> {
 export function createApp(options: ServerOptions): Hono {
   const { rootDir, docsMode, theme, liveReload, watcher } = options;
   const app = new Hono();
+  app.use(logger());
   let mdFileCache: string[] | null = null;
 
   function resolveSafe(requestPath: string): string | null {
