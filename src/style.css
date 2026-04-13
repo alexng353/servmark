@@ -1,0 +1,489 @@
+/* ============================================
+   Theme Variables
+   ============================================ */
+
+[data-theme="light"] {
+  --bg: #ffffff;
+  --bg-secondary: #f6f8fa;
+  --bg-tertiary: #eaeef2;
+  --text: #1f2328;
+  --text-secondary: #656d76;
+  --text-tertiary: #8b949e;
+  --border: #d0d7de;
+  --link: #0969da;
+  --link-hover: #0550ae;
+  --hover-bg: rgba(208, 215, 222, 0.32);
+  --code-bg: #eff1f3;
+  --blockquote-border: #d0d7de;
+  --table-border: #d0d7de;
+  --table-row-alt: #f6f8fa;
+  --danger: #d1242f;
+  --icon-folder: #54aeff;
+  --icon-file: #8b949e;
+  --sidebar-bg: #f6f8fa;
+  --sidebar-active: rgba(9, 105, 218, 0.1);
+  --badge-bg: #ddf4ff;
+  --badge-text: #0969da;
+}
+
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --text: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-tertiary: #6e7681;
+  --border: #30363d;
+  --link: #58a6ff;
+  --link-hover: #79c0ff;
+  --hover-bg: rgba(177, 186, 196, 0.12);
+  --code-bg: #161b22;
+  --blockquote-border: #30363d;
+  --table-border: #30363d;
+  --table-row-alt: #161b22;
+  --danger: #f85149;
+  --icon-folder: #54aeff;
+  --icon-file: #8b949e;
+  --sidebar-bg: #161b22;
+  --sidebar-active: rgba(88, 166, 255, 0.15);
+  --badge-bg: #1f3a5f;
+  --badge-text: #58a6ff;
+}
+
+/* ============================================
+   Reset & Base
+   ============================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
+    Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+
+/* ============================================
+   Page Layout
+   ============================================ */
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.page-header-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.page-header-title a {
+  color: var(--text-secondary);
+}
+
+.page-header-title a:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.page-content {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+/* ============================================
+   Theme Toggle
+   ============================================ */
+
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.theme-toggle:hover {
+  background: var(--hover-bg);
+  color: var(--text);
+}
+
+.theme-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Show/hide sun/moon based on theme */
+[data-theme="dark"] .icon-sun { display: block; }
+[data-theme="dark"] .icon-moon { display: none; }
+[data-theme="light"] .icon-sun { display: none; }
+[data-theme="light"] .icon-moon { display: block; }
+
+/* ============================================
+   Directory Listing
+   ============================================ */
+
+.dir-listing {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.dir-listing thead {
+  background: var(--bg-secondary);
+}
+
+.dir-listing th {
+  text-align: left;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.dir-listing td {
+  padding: 8px 16px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dir-listing tr:last-child td {
+  border-bottom: none;
+}
+
+.dir-listing tr:hover td {
+  background: var(--hover-bg);
+}
+
+.dir-listing .name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dir-listing .name-cell svg {
+  flex-shrink: 0;
+}
+
+.dir-listing .size-cell,
+.dir-listing .date-cell {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.dir-heading {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+/* ============================================
+   Markdown Prose (.markdown-body)
+   ============================================ */
+
+.markdown-body {
+  font-size: 16px;
+  line-height: 1.7;
+  word-wrap: break-word;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.markdown-body h1 { font-size: 2em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
+.markdown-body h2 { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
+.markdown-body h3 { font-size: 1.25em; }
+.markdown-body h4 { font-size: 1em; }
+.markdown-body h5 { font-size: 0.875em; }
+.markdown-body h6 { font-size: 0.85em; color: var(--text-secondary); }
+
+.markdown-body p {
+  margin-bottom: 16px;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin-bottom: 16px;
+  padding-left: 2em;
+}
+
+.markdown-body li {
+  margin-bottom: 4px;
+}
+
+.markdown-body li + li {
+  margin-top: 4px;
+}
+
+.markdown-body blockquote {
+  margin: 0 0 16px 0;
+  padding: 0 1em;
+  border-left: 4px solid var(--blockquote-border);
+  color: var(--text-secondary);
+}
+
+.markdown-body code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 85%;
+  padding: 0.2em 0.4em;
+  background: var(--code-bg);
+  border-radius: 4px;
+}
+
+.markdown-body pre {
+  margin-bottom: 16px;
+  padding: 16px;
+  overflow-x: auto;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  line-height: 1.5;
+}
+
+.markdown-body pre code {
+  padding: 0;
+  background: transparent;
+  font-size: 85%;
+  border-radius: 0;
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.markdown-body table th,
+.markdown-body table td {
+  padding: 6px 13px;
+  border: 1px solid var(--table-border);
+}
+
+.markdown-body table th {
+  font-weight: 600;
+  background: var(--bg-secondary);
+}
+
+.markdown-body table tr:nth-child(even) {
+  background: var(--table-row-alt);
+}
+
+.markdown-body hr {
+  border: none;
+  border-top: 2px solid var(--border);
+  margin: 24px 0;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.markdown-body .task-list-item {
+  list-style: none;
+  margin-left: -1.5em;
+}
+
+.markdown-body .task-list-item input[type="checkbox"] {
+  margin-right: 0.5em;
+  vertical-align: middle;
+}
+
+/* ============================================
+   Shiki Dual Theme
+   ============================================ */
+
+.shiki,
+.shiki span {
+  color: var(--shiki-light) !important;
+  background-color: var(--shiki-light-bg) !important;
+}
+
+[data-theme="dark"] .shiki,
+[data-theme="dark"] .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
+
+/* ============================================
+   Docs Mode Sidebar
+   ============================================ */
+
+.docs-layout {
+  display: flex;
+  height: 100vh;
+}
+
+.docs-sidebar {
+  width: 280px;
+  min-width: 280px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+  list-style: none;
+}
+
+.sidebar-list a {
+  display: block;
+  padding: 6px 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-list a:hover {
+  background: var(--hover-bg);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.sidebar-list a.active {
+  background: var(--sidebar-active);
+  color: var(--link);
+  border-left-color: var(--link);
+  font-weight: 500;
+}
+
+.docs-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 40px;
+  max-width: 100%;
+}
+
+.docs-content .markdown-body {
+  max-width: 860px;
+}
+
+/* ============================================
+   404 Page
+   ============================================ */
+
+.not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+}
+
+.not-found h1 {
+  font-size: 72px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.not-found p {
+  font-size: 18px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.not-found .back-btn {
+  display: inline-block;
+  padding: 8px 20px;
+  background: var(--bg-tertiary);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.not-found .back-btn:hover {
+  background: var(--hover-bg);
+  text-decoration: none;
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+
+@media (max-width: 768px) {
+  .page-content {
+    padding: 20px 16px;
+  }
+
+  .docs-sidebar {
+    width: 220px;
+    min-width: 220px;
+  }
+
+  .docs-content {
+    padding: 20px 16px;
+  }
+
+  .dir-listing .date-cell {
+    display: none;
+  }
+}
