@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from "vitest";
 import { createApp, type ServerOptions } from "../src/server.js";
 import { initRenderer } from "../src/render.js";
 import { mkdtemp, writeFile, mkdir, rm } from "node:fs/promises";
@@ -13,6 +13,10 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   testDir = await mkdtemp(join(tmpdir(), "servmark-test-"));
+});
+
+afterEach(async () => {
+  await rm(testDir, { recursive: true, force: true });
 });
 
 function makeApp(overrides?: Partial<ServerOptions>) {
