@@ -9,6 +9,7 @@ export class FileWatcher {
   private watcher: FSWatcher | null = null;
   private clients = new Set<SseClient>();
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private stopped = false;
 
   constructor(
     private rootDir: string,
@@ -16,13 +17,35 @@ export class FileWatcher {
   ) {}
 
   start(): void {
+    this.stopped = false;
+    this.startWatcher();
+  }
+
+  private startWatcher(): void {
+    this.watcher?.close();
     this.watcher = watch(
       this.rootDir,
       { recursive: true },
-      (_event, filename) => {
+      (event, filename) => {
         if (filename) this.handleChange(String(filename));
+        // Editors like neovim write to a temp file and rename it over the
+        // original. On Linux this replaces the inode, which causes fs.watch
+        // to silently stop delivering events. Restarting the watcher on
+        // rename events fixes this.
+        if (event === "rename" && !this.stopped) {
+          this.restartWatcher();
+        }
       }
     );
+  }
+
+  private restartDebounce: ReturnType<typeof setTimeout> | null = null;
+
+  private restartWatcher(): void {
+    if (this.restartDebounce) clearTimeout(this.restartDebounce);
+    this.restartDebounce = setTimeout(() => {
+      if (!this.stopped) this.startWatcher();
+    }, 200);
   }
 
   handleChange(filename: string): void {
@@ -48,7 +71,9 @@ export class FileWatcher {
   }
 
   stop(): void {
+    this.stopped = true;
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    if (this.restartDebounce) clearTimeout(this.restartDebounce);
     this.watcher?.close();
     this.watcher = null;
     this.clients.clear();
