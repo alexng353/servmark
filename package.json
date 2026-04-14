@@ -1,6 +1,6 @@
 {
   "name": "servmark",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Static file server with markdown rendering and syntax highlighting",
   "type": "module",
   "bin": {
