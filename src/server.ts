@@ -14,6 +14,7 @@ import {
   type PageOptions,
 } from "./templates.js";
 import { FileWatcher } from "./watcher.js";
+import { loadIgnoreRules, isIgnored } from "./ignore.js";
 
 export interface ServerOptions {
   rootDir: string;
@@ -54,19 +55,18 @@ function getMimeType(filePath: string): string {
   return MIME_TYPES[extname(filePath).toLowerCase()] || "application/octet-stream";
 }
 
-const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next", "__pycache__"]);
-
-async function findMarkdownFiles(rootDir: string): Promise<string[]> {
+async function findMarkdownFiles(rootDir: string, rules: ReturnType<typeof loadIgnoreRules>): Promise<string[]> {
   const files: string[] = [];
   async function walk(dir: string): Promise<void> {
     const entries = await readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.isDirectory() && SKIP_DIRS.has(entry.name)) continue;
       const fullPath = join(dir, entry.name);
+      const relPath = relative(rootDir, fullPath);
+      if (isIgnored(relPath, rules)) continue;
       if (entry.isDirectory()) {
         await walk(fullPath);
       } else if (entry.name.endsWith(".md")) {
-        files.push(relative(rootDir, fullPath));
+        files.push(relPath);
       }
     }
   }
@@ -78,6 +78,7 @@ export function createApp(options: ServerOptions): Hono {
   const { rootDir, docsMode, theme, liveReload, watcher } = options;
   const app = new Hono();
   app.use(logger());
+  const ignoreRules = loadIgnoreRules(rootDir);
   let mdFileCache: string[] | null = null;
 
   function resolveSafe(requestPath: string): string | null {
@@ -104,7 +105,7 @@ export function createApp(options: ServerOptions): Hono {
 
   async function getMdFiles(): Promise<string[]> {
     if (!mdFileCache) {
-      mdFileCache = await findMarkdownFiles(rootDir);
+      mdFileCache = await findMarkdownFiles(rootDir, ignoreRules);
     }
     return mdFileCache;
   }

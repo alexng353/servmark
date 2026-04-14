@@ -30,11 +30,13 @@
     "markdown-it": "^14.1.0",
     "markdown-it-task-lists": "^2.1.1",
     "open": "^10.1.2",
+    "picomatch": "^4.0.4",
     "shiki": "^3.3.0"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.15.3",
+    "@types/picomatch": "^4.0.3",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3",
     "vitest": "^3.1.2"

@@ -1,4 +1,5 @@
 import { watch, type FSWatcher } from "node:fs";
+import { loadIgnoreRules, isIgnored as checkIgnored } from "./ignore.js";
 
 export interface SseClient {
   send: (data: string) => void;
@@ -19,11 +20,13 @@ export class FileWatcher {
 
   start(): void {
     this.stopped = false;
+    this.loadRules();
     this.startWatcher();
   }
 
   private startWatcher(): void {
     this.watcher?.close();
+    this.loadRules();
     this.watcher = watch(
       this.rootDir,
       { recursive: true },
@@ -47,6 +50,7 @@ export class FileWatcher {
     );
   }
 
+  private ignoreRules: ReturnType<typeof loadIgnoreRules> = [];
   private restartDebounce: ReturnType<typeof setTimeout> | null = null;
 
   private restartWatcher(): void {
@@ -56,24 +60,12 @@ export class FileWatcher {
     }, 200);
   }
 
+  private loadRules(): void {
+    this.ignoreRules = loadIgnoreRules(this.rootDir);
+  }
+
   private isIgnored(filename: string): boolean {
-    // Ignore dotfile directories (.git, .next, .cache, etc.)
-    const firstSegment = filename.split("/")[0];
-    if (firstSegment.startsWith(".")) return true;
-
-    // Ignore common build/dependency directories
-    const SKIP_DIRS = ["node_modules", "dist", "build", "__pycache__"];
-    if (SKIP_DIRS.includes(firstSegment)) return true;
-
-    // Ignore editor temp/backup files
-    const basename = filename.split("/").pop()!;
-    if (basename.endsWith("~")) return true;
-    if (basename.startsWith(".#")) return true; // emacs lockfiles
-    if (basename.endsWith(".swp") || basename.endsWith(".swo")) return true; // vim swap
-    if (basename.endsWith(".tmp")) return true;
-    if (basename.startsWith("__jb_") || basename.endsWith("__jb_tmp__")) return true; // jetbrains
-
-    return false;
+    return checkIgnored(filename, this.ignoreRules);
   }
 
   handleChange(filename: string): void {
