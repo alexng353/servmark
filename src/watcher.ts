@@ -1,5 +1,4 @@
 import { watch, type FSWatcher } from "node:fs";
-import { execFileSync } from "node:child_process";
 
 export interface SseClient {
   send: (data: string) => void;
@@ -25,7 +24,6 @@ export class FileWatcher {
 
   private startWatcher(): void {
     this.watcher?.close();
-    this.ignoreCache.clear();
     this.watcher = watch(
       this.rootDir,
       { recursive: true },
@@ -49,8 +47,6 @@ export class FileWatcher {
     );
   }
 
-  private ignoreCache = new Map<string, boolean>();
-  private useGitIgnore: boolean | null = null;
   private restartDebounce: ReturnType<typeof setTimeout> | null = null;
 
   private restartWatcher(): void {
@@ -61,35 +57,23 @@ export class FileWatcher {
   }
 
   private isIgnored(filename: string): boolean {
-    // Always ignore .git internals
-    if (filename.startsWith(".git/") || filename === ".git") return true;
+    // Ignore dotfile directories (.git, .next, .cache, etc.)
+    const firstSegment = filename.split("/")[0];
+    if (firstSegment.startsWith(".")) return true;
 
-    const cached = this.ignoreCache.get(filename);
-    if (cached !== undefined) return cached;
+    // Ignore common build/dependency directories
+    const SKIP_DIRS = ["node_modules", "dist", "build", "__pycache__"];
+    if (SKIP_DIRS.includes(firstSegment)) return true;
 
-    // Check if we're in a git repo (once)
-    if (this.useGitIgnore === null) {
-      try {
-        execFileSync("git", ["rev-parse", "--git-dir"], { cwd: this.rootDir, stdio: "ignore" });
-        this.useGitIgnore = true;
-      } catch {
-        this.useGitIgnore = false;
-      }
-    }
+    // Ignore editor temp/backup files
+    const basename = filename.split("/").pop()!;
+    if (basename.endsWith("~")) return true;
+    if (basename.startsWith(".#")) return true; // emacs lockfiles
+    if (basename.endsWith(".swp") || basename.endsWith(".swo")) return true; // vim swap
+    if (basename.endsWith(".tmp")) return true;
+    if (basename.startsWith("__jb_") || basename.endsWith("__jb_tmp__")) return true; // jetbrains
 
-    let ignored = false;
-    if (this.useGitIgnore) {
-      try {
-        // exit code 0 = ignored, 1 = not ignored
-        execFileSync("git", ["check-ignore", "-q", filename], { cwd: this.rootDir, stdio: "ignore" });
-        ignored = true;
-      } catch {
-        ignored = false;
-      }
-    }
-
-    this.ignoreCache.set(filename, ignored);
-    return ignored;
+    return false;
   }
 
   handleChange(filename: string): void {
