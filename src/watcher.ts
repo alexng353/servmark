@@ -1,4 +1,5 @@
 import { watch, type FSWatcher } from "node:fs";
+import { execFileSync } from "node:child_process";
 
 export interface SseClient {
   send: (data: string) => void;
@@ -24,24 +25,32 @@ export class FileWatcher {
 
   private startWatcher(): void {
     this.watcher?.close();
+    this.ignoreCache.clear();
     this.watcher = watch(
       this.rootDir,
       { recursive: true },
       (event, filename) => {
-        if (this.debug) console.log(`[debug] fs.watch: ${event} "${filename}"`);
-        if (filename) this.handleChange(String(filename));
+        if (!filename) return;
+        const name = String(filename);
+        if (this.debug) console.log(`[debug] fs.watch: ${event} "${name}"`);
         // Editors like neovim write to a temp file and rename it over the
         // original. On Linux this replaces the inode, which causes fs.watch
         // to silently stop delivering events. Restarting the watcher on
         // rename events fixes this.
         if (event === "rename" && !this.stopped) {
-          if (this.debug) console.log("[debug] rename detected, restarting watcher");
           this.restartWatcher();
         }
+        if (this.isIgnored(name)) {
+          if (this.debug) console.log(`[debug] ignored: "${name}"`);
+          return;
+        }
+        this.handleChange(name);
       }
     );
   }
 
+  private ignoreCache = new Map<string, boolean>();
+  private useGitIgnore: boolean | null = null;
   private restartDebounce: ReturnType<typeof setTimeout> | null = null;
 
   private restartWatcher(): void {
@@ -49,6 +58,38 @@ export class FileWatcher {
     this.restartDebounce = setTimeout(() => {
       if (!this.stopped) this.startWatcher();
     }, 200);
+  }
+
+  private isIgnored(filename: string): boolean {
+    // Always ignore .git internals
+    if (filename.startsWith(".git/") || filename === ".git") return true;
+
+    const cached = this.ignoreCache.get(filename);
+    if (cached !== undefined) return cached;
+
+    // Check if we're in a git repo (once)
+    if (this.useGitIgnore === null) {
+      try {
+        execFileSync("git", ["rev-parse", "--git-dir"], { cwd: this.rootDir, stdio: "ignore" });
+        this.useGitIgnore = true;
+      } catch {
+        this.useGitIgnore = false;
+      }
+    }
+
+    let ignored = false;
+    if (this.useGitIgnore) {
+      try {
+        // exit code 0 = ignored, 1 = not ignored
+        execFileSync("git", ["check-ignore", "-q", filename], { cwd: this.rootDir, stdio: "ignore" });
+        ignored = true;
+      } catch {
+        ignored = false;
+      }
+    }
+
+    this.ignoreCache.set(filename, ignored);
+    return ignored;
   }
 
   handleChange(filename: string): void {
