@@ -1,14 +1,20 @@
 import { parseArgs } from "node:util";
-import { resolve } from "node:path";
+import { resolve, dirname, join } from "node:path";
 import { createServer } from "node:net";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { createApp } from "./server.js";
 import { initRenderer } from "./render.js";
 import { FileWatcher } from "./watcher.js";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(join(__dirname, "..", "package.json"), "utf-8"));
+
 export interface CliOptions {
   port: number;
   docsMode: boolean;
+  debug: boolean;
   theme: "dark" | "light" | "auto";
   browser: boolean;
   liveReload: boolean;
@@ -19,8 +25,10 @@ export function parseCliArgs(args: string[]): CliOptions {
   const { values, positionals } = parseArgs({
     args,
     options: {
+      version: { type: "boolean", short: "v", default: false },
       port: { type: "string", short: "p", default: "3000" },
       docs: { type: "boolean", default: false },
+      debug: { type: "boolean", default: false },
       dark: { type: "boolean", default: false },
       light: { type: "boolean", default: false },
       browser: { type: "boolean", default: true },
@@ -32,6 +40,11 @@ export function parseCliArgs(args: string[]): CliOptions {
     strict: true,
   });
 
+  if (values.version) {
+    console.log(pkg.version);
+    process.exit(0);
+  }
+
   let theme: "dark" | "light" | "auto" = "auto";
   if (values.dark) theme = "dark";
   if (values.light) theme = "light";
@@ -39,6 +52,7 @@ export function parseCliArgs(args: string[]): CliOptions {
   return {
     port: parseInt(values.port as string, 10),
     docsMode: values.docs as boolean,
+    debug: values.debug as boolean,
     theme,
     browser: values["no-browser"] ? false : (values.browser as boolean),
     liveReload: values["no-reload"] ? false : (values.reload as boolean),
@@ -66,7 +80,7 @@ async function main(): Promise<void> {
 
   let watcher: FileWatcher | undefined;
   if (opts.liveReload) {
-    watcher = new FileWatcher(rootDir);
+    watcher = new FileWatcher(rootDir, 100, opts.debug);
     watcher.start();
   }
 

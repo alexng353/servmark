@@ -10,7 +10,8 @@
     "build": "tsup && cp src/style.css dist/style.css",
     "dev": "tsup --watch",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "release": "npm version patch && npm run build && npm publish && git push && git push --tags"
   },
   "files": [
     "dist"

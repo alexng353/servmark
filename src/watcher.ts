@@ -13,7 +13,8 @@ export class FileWatcher {
 
   constructor(
     private rootDir: string,
-    private debounceMs: number = 100
+    private debounceMs: number = 100,
+    private debug: boolean = false,
   ) {}
 
   start(): void {
@@ -27,12 +28,14 @@ export class FileWatcher {
       this.rootDir,
       { recursive: true },
       (event, filename) => {
+        if (this.debug) console.log(`[debug] fs.watch: ${event} "${filename}"`);
         if (filename) this.handleChange(String(filename));
         // Editors like neovim write to a temp file and rename it over the
         // original. On Linux this replaces the inode, which causes fs.watch
         // to silently stop delivering events. Restarting the watcher on
         // rename events fixes this.
         if (event === "rename" && !this.stopped) {
+          if (this.debug) console.log("[debug] rename detected, restarting watcher");
           this.restartWatcher();
         }
       }
@@ -65,6 +68,7 @@ export class FileWatcher {
 
   private broadcast(filename: string): void {
     const data = `data: ${JSON.stringify({ path: filename })}\n\n`;
+    if (this.debug) console.log(`[debug] broadcast to ${this.clients.size} client(s): ${filename}`);
     for (const client of this.clients) {
       client.send(data);
     }
