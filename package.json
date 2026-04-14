@@ -1,6 +1,6 @@
 {
   "name": "servmark",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Static file server with markdown rendering and syntax highlighting",
   "type": "module",
   "bin": {
@@ -15,7 +15,12 @@
   "files": [
     "dist"
   ],
-  "keywords": ["serve", "markdown", "syntax-highlighting", "static-server"],
+  "keywords": [
+    "serve",
+    "markdown",
+    "syntax-highlighting",
+    "static-server"
+  ],
   "license": "MIT",
   "dependencies": {
     "@hono/node-server": "^1.14.1",
