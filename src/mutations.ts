@@ -83,3 +83,95 @@ export async function reorderTaskItem(
 
   await writeFile(filePath, reordered.join("\n"), "utf-8");
 }
+
+interface CommentBlock {
+  startLine: number; // line index of {::comment}
+  endLine: number; // line index of {:/comment}
+  separatorLine: number; // line index of ---
+}
+
+function findCommentBlocks(lines: string[]): CommentBlock[] {
+  const blocks: CommentBlock[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() === "{::comment}") {
+      let separatorLine = -1;
+      for (let j = i + 1; j < lines.length; j++) {
+        if (lines[j].trim() === "---" && separatorLine === -1) {
+          separatorLine = j;
+        }
+        if (lines[j].trim() === "{:/comment}") {
+          blocks.push({ startLine: i, endLine: j, separatorLine });
+          break;
+        }
+      }
+    }
+  }
+  return blocks;
+}
+
+export async function createComment(
+  filePath: string,
+  startLine: number,
+  endLine: number,
+  body: string
+): Promise<void> {
+  const content = await readFile(filePath, "utf-8");
+  const lines = content.split("\n");
+
+  const rangeLength = endLine - startLine;
+  const commentBlock = [
+    "{::comment}",
+    `relativeLines: +0..=${rangeLength}`,
+    "---",
+    body,
+    "{:/comment}",
+  ];
+
+  lines.splice(startLine, 0, ...commentBlock);
+  await writeFile(filePath, lines.join("\n"), "utf-8");
+}
+
+export async function updateComment(
+  filePath: string,
+  commentIndex: number,
+  body: string
+): Promise<void> {
+  const content = await readFile(filePath, "utf-8");
+  const lines = content.split("\n");
+  const blocks = findCommentBlocks(lines);
+
+  if (commentIndex >= blocks.length) {
+    throw new Error(
+      `Comment index ${commentIndex} out of range (found ${blocks.length})`
+    );
+  }
+
+  const block = blocks[commentIndex];
+  const newLines = [
+    ...lines.slice(0, block.separatorLine + 1),
+    body,
+    ...lines.slice(block.endLine),
+  ];
+
+  await writeFile(filePath, newLines.join("\n"), "utf-8");
+}
+
+export async function deleteComment(
+  filePath: string,
+  commentIndex: number
+): Promise<void> {
+  const content = await readFile(filePath, "utf-8");
+  const lines = content.split("\n");
+  const blocks = findCommentBlocks(lines);
+
+  if (commentIndex >= blocks.length) {
+    throw new Error(
+      `Comment index ${commentIndex} out of range (found ${blocks.length})`
+    );
+  }
+
+  const block = blocks[commentIndex];
+  lines.splice(block.startLine, block.endLine - block.startLine + 1);
+
+  await writeFile(filePath, lines.join("\n"), "utf-8");
+}
