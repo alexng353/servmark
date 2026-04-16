@@ -147,3 +147,53 @@ describe("reorder endpoint", () => {
     expect(content).toBe("- [ ] second\n- [ ] third\n- [ ] first\n");
   });
 });
+
+describe("comment endpoint", () => {
+  it("creates a comment in a markdown file", async () => {
+    await writeFile(join(testDir, "doc.md"), "Line zero\nLine one\nLine two\n");
+    const app = makeApp();
+    const res = await app.request("/__servmark/comment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: "/doc.md", startLine: 0, endLine: 0, body: "A note" }),
+    });
+    expect(res.status).toBe(200);
+    const content = await readFile(join(testDir, "doc.md"), "utf-8");
+    expect(content).toContain("{::comment}");
+    expect(content).toContain("A note");
+  });
+
+  it("updates an existing comment", async () => {
+    await writeFile(
+      join(testDir, "doc.md"),
+      "{::comment}\nrelativeLines: +0..=0\n---\nOld\n{:/comment}\nContent\n"
+    );
+    const app = makeApp();
+    const res = await app.request("/__servmark/comment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: "/doc.md", commentIndex: 0, body: "New" }),
+    });
+    expect(res.status).toBe(200);
+    const content = await readFile(join(testDir, "doc.md"), "utf-8");
+    expect(content).toContain("New");
+    expect(content).not.toContain("Old");
+  });
+
+  it("deletes a comment", async () => {
+    await writeFile(
+      join(testDir, "doc.md"),
+      "{::comment}\nrelativeLines: +0..=0\n---\nGone\n{:/comment}\nContent\n"
+    );
+    const app = makeApp();
+    const res = await app.request("/__servmark/comment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: "/doc.md", commentIndex: 0, delete: true }),
+    });
+    expect(res.status).toBe(200);
+    const content = await readFile(join(testDir, "doc.md"), "utf-8");
+    expect(content).not.toContain("{::comment}");
+    expect(content).toContain("Content");
+  });
+});

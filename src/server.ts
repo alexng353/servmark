@@ -5,7 +5,7 @@ import { join, resolve, relative, extname, normalize } from "node:path";
 import { createReadStream } from "node:fs";
 import { Readable } from "node:stream";
 import { renderMarkdown } from "./render.js";
-import { toggleCheckbox, reorderTaskItem } from "./mutations.js";
+import { toggleCheckbox, reorderTaskItem, createComment, updateComment, deleteComment } from "./mutations.js";
 import {
   pageLayout,
   directoryListingHtml,
@@ -243,6 +243,37 @@ export function createApp(options: ServerOptions): Hono {
         body.fromIndex,
         body.toIndex,
       );
+      return c.json({ ok: true });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  });
+
+  // Comment CRUD endpoint
+  app.post("/__servmark/comment", async (c) => {
+    const body = await c.req.json<{
+      path: string;
+      startLine?: number;
+      endLine?: number;
+      body?: string;
+      commentIndex?: number;
+      delete?: boolean;
+    }>();
+
+    const filePath = resolveSafe(body.path);
+    if (!filePath) return c.json({ error: "Forbidden" }, 403);
+    if (!filePath.endsWith(".md")) return c.json({ error: "Not a markdown file" }, 400);
+
+    try {
+      if (body.delete && body.commentIndex !== undefined) {
+        await deleteComment(filePath, body.commentIndex);
+      } else if (body.commentIndex !== undefined && body.body !== undefined) {
+        await updateComment(filePath, body.commentIndex, body.body);
+      } else if (body.startLine !== undefined && body.endLine !== undefined && body.body !== undefined) {
+        await createComment(filePath, body.startLine, body.endLine, body.body);
+      } else {
+        return c.json({ error: "Invalid request" }, 400);
+      }
       return c.json({ ok: true });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 400);
