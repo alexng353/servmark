@@ -185,6 +185,52 @@ function reorderScript(): string {
 </script>`;
 }
 
+function commentHighlightScript(): string {
+  return `<script>
+(function(){
+  var content=document.getElementById("content");
+  if(!content)return;
+
+  function initHighlights(){
+    var comments=content.querySelectorAll(".sm-comment");
+    comments.forEach(function(card){
+      var id=card.getAttribute("data-comment-id");
+      var lines=card.getAttribute("data-lines");
+      if(!lines)return;
+      var lineNums=lines.split(",").map(Number);
+
+      // Walk forward from the comment card through sibling elements
+      var sibling=card.nextElementSibling;
+      var relIdx=0;
+      var highlighted=[];
+      while(sibling&&relIdx<=Math.max.apply(null,lineNums)){
+        if(lineNums.indexOf(relIdx)>=0){
+          sibling.classList.add("sm-highlighted");
+          sibling.setAttribute("data-comment-id",id);
+          highlighted.push(sibling);
+        }
+        relIdx++;
+        sibling=sibling.nextElementSibling;
+      }
+
+      // Hover interactions
+      card.addEventListener("mouseenter",function(){
+        highlighted.forEach(function(el){el.classList.add("flash")});
+      });
+      card.addEventListener("mouseleave",function(){
+        highlighted.forEach(function(el){el.classList.remove("flash")});
+      });
+      highlighted.forEach(function(el){
+        el.addEventListener("mouseenter",function(){card.classList.add("highlight")});
+        el.addEventListener("mouseleave",function(){card.classList.remove("highlight")});
+      });
+    });
+  }
+  initHighlights();
+})();
+</script>`;
+}
+
 function liveReloadScript(): string {
   return `<script>
 (function(){
@@ -270,6 +316,7 @@ export function pageLayout(options: PageOptions): string {
   ${themeToggleScript()}
   ${checkboxScript()}
   ${reorderScript()}
+  ${commentHighlightScript()}
   ${options.liveReload ? liveReloadScript() : ""}
 </body>
 </html>`;
@@ -287,6 +334,7 @@ export function pageLayout(options: PageOptions): string {
   ${themeToggleScript()}
   ${checkboxScript()}
   ${reorderScript()}
+  ${commentHighlightScript()}
   ${options.liveReload ? liveReloadScript() : ""}
 </body>
 </html>`;

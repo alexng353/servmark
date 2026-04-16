@@ -540,6 +540,52 @@ a:hover {
 }
 
 /* ============================================
+   Markdown Comments
+   ============================================ */
+
+.sm-comment {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.sm-comment:hover {
+  border-color: var(--link);
+}
+
+.sm-comment.highlight {
+  border-color: var(--link);
+  box-shadow: 0 0 0 2px var(--sidebar-active);
+}
+
+.sm-comment-body p {
+  margin-bottom: 4px;
+}
+
+.sm-comment-body p:last-child {
+  margin-bottom: 0;
+}
+
+.sm-highlighted {
+  border-left: 4px solid var(--link);
+  padding-left: 12px;
+  margin-left: -16px;
+  transition: background 0.2s;
+}
+
+.sm-highlighted.flash {
+  background: var(--sidebar-active);
+}
+
+/* ============================================
    404 Page
    ============================================ */
 

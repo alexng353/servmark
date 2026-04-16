@@ -22,8 +22,30 @@ export async function initRenderer(): Promise<void> {
         dark: "github-dark",
       },
       defaultColor: false,
-    })
+    }),
   );
+
+  // Add source line attributes for comment highlighting
+  const blockRules = [
+    "paragraph_open",
+    "heading_open",
+    "bullet_list_open",
+    "ordered_list_open",
+    "blockquote_open",
+    "table_open",
+    "hr",
+  ];
+  for (const rule of blockRules) {
+    const original = md.renderer.rules[rule];
+    md.renderer.rules[rule] = function (tokens, idx, options, env, self) {
+      const token = tokens[idx];
+      if (token.map && token.map[0] !== null) {
+        token.attrSet("data-source-line", String(token.map[0]));
+      }
+      if (original) return original(tokens, idx, options, env, self);
+      return self.renderToken(tokens, idx, options);
+    };
+  }
 }
 
 export function renderMarkdown(content: string): string {

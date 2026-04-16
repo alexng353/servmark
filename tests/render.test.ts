@@ -8,18 +8,19 @@ beforeAll(async () => {
 describe("renderMarkdown", () => {
   it("renders headings", () => {
     const html = renderMarkdown("# Hello");
-    expect(html).toContain("<h1>Hello</h1>");
+    expect(html).toContain(">Hello</h1>");
+    expect(html).toContain('data-source-line="0"');
   });
 
   it("renders paragraphs", () => {
     const html = renderMarkdown("Hello world");
-    expect(html).toContain("<p>Hello world</p>");
+    expect(html).toContain(">Hello world</p>");
   });
 
   it("renders GFM tables", () => {
     const md = "| A | B |\n|---|---|\n| 1 | 2 |";
     const html = renderMarkdown(md);
-    expect(html).toContain("<table>");
+    expect(html).toContain("<table");
     expect(html).toContain("<td>1</td>");
   });
 

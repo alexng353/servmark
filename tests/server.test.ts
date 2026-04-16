@@ -55,7 +55,7 @@ describe("server", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/html");
     const html = await res.text();
-    expect(html).toContain("<h1>Hello</h1>");
+    expect(html).toContain(">Hello</h1>");
   });
 
   it("returns 404 for missing files", async () => {
@@ -79,7 +79,7 @@ describe("server", () => {
     const res = await app.request("/__servmark/content?path=/doc.md");
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain("<h1>Updated</h1>");
+    expect(html).toContain(">Updated</h1>");
     expect(html).not.toContain("<!DOCTYPE");
   });
 
