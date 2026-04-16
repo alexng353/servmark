@@ -1,6 +1,7 @@
 import MarkdownIt from "markdown-it";
 import Shiki from "@shikijs/markdown-it";
 import taskLists from "markdown-it-task-lists";
+import { commentPlugin } from "./comment-plugin.js";
 
 let md: MarkdownIt;
 
@@ -12,6 +13,7 @@ export async function initRenderer(): Promise<void> {
   });
 
   md.use(taskLists, { enabled: true });
+  md.use(commentPlugin);
 
   md.use(
     await Shiki({
