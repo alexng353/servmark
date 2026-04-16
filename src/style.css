@@ -96,19 +96,46 @@ a:hover {
   background: var(--bg-secondary);
 }
 
-.page-header-title {
+.page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary);
+  min-width: 0;
+  overflow: hidden;
 }
 
-.page-header-title a {
-  color: var(--text-secondary);
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.page-header-title a:hover {
-  color: var(--text);
+.breadcrumb a {
+  color: var(--text-secondary);
+  cursor: pointer;
   text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.breadcrumb-sep {
+  color: var(--text-tertiary);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.breadcrumb-current {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .page-content {

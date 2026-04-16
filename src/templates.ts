@@ -96,7 +96,28 @@ function liveReloadScript(): string {
 </script>`;
 }
 
-// Section 3: pageLayout function and escapeHtml helper
+// Section 3: Breadcrumb, pageLayout function, and escapeHtml helper
+
+export function breadcrumbHtml(currentPath: string): string {
+  const segments = currentPath.split("/").filter(Boolean);
+  let parts: string[] = [`<a href="/">servmark</a>`];
+
+  for (let i = 0; i < segments.length; i++) {
+    parts.push(`<span class="breadcrumb-sep">/</span>`);
+    if (i === segments.length - 1) {
+      // Last segment is plain text (current)
+      parts.push(
+        `<span class="breadcrumb-current">${escapeHtml(segments[i])}</span>`
+      );
+    } else {
+      // Intermediate segments are clickable links
+      const href = "/" + segments.slice(0, i + 1).join("/") + "/";
+      parts.push(`<a href="${escapeHtml(href)}">${escapeHtml(segments[i])}</a>`);
+    }
+  }
+
+  return `<span class="breadcrumb">${parts.join("")}</span>`;
+}
 
 export function pageLayout(options: PageOptions): string {
   const initialTheme = options.theme === "auto" ? "dark" : options.theme;
@@ -137,7 +158,7 @@ export function pageLayout(options: PageOptions): string {
   return `${head}
 <body>
   <header class="page-header">
-    <div class="page-header-title"><a href="/">servmark</a> · ${escapeHtml(options.currentPath || "/")}</div>
+    <div class="page-header-left">${breadcrumbHtml(options.currentPath || "/")}</div>
     ${themeToggleButton()}
   </header>
   <main class="page-content">
