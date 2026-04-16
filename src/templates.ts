@@ -93,11 +93,37 @@ function sidebarToggleScript(): string {
 </script>`;
 }
 
+function checkboxScript(): string {
+  return `<script>
+(function(){
+  var suppressed=null;
+  document.getElementById("content").addEventListener("change",function(e){
+    if(e.target.tagName!=="INPUT"||e.target.type!=="checkbox")return;
+    var boxes=document.querySelectorAll('#content .task-list-item input[type="checkbox"]');
+    var idx=-1;
+    for(var i=0;i<boxes.length;i++){if(boxes[i]===e.target){idx=i;break}}
+    if(idx<0)return;
+    suppressed=Date.now();
+    fetch("/__servmark/checkbox",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({path:decodeURIComponent(window.location.pathname),index:idx,checked:e.target.checked})
+    });
+  });
+  window.__smSuppressed=function(){
+    if(suppressed&&Date.now()-suppressed<500){suppressed=null;return true}
+    return false;
+  };
+})();
+</script>`;
+}
+
 function liveReloadScript(): string {
   return `<script>
 (function(){
   var es=new EventSource("/__servmark/events");
   es.onmessage=function(e){
+    if(window.__smSuppressed&&window.__smSuppressed())return;
     var d=JSON.parse(e.data);
     var cur=decodeURIComponent(window.location.pathname);
     if("/"+d.path===cur||d.path===cur){
@@ -173,6 +199,7 @@ export function pageLayout(options: PageOptions): string {
   </div>
   ${sidebarToggleScript()}
   ${themeToggleScript()}
+  ${checkboxScript()}
   ${options.liveReload ? liveReloadScript() : ""}
 </body>
 </html>`;
@@ -188,6 +215,7 @@ export function pageLayout(options: PageOptions): string {
     <div id="content">${options.content}</div>
   </main>
   ${themeToggleScript()}
+  ${checkboxScript()}
   ${options.liveReload ? liveReloadScript() : ""}
 </body>
 </html>`;

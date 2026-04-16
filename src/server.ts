@@ -5,6 +5,7 @@ import { join, resolve, relative, extname, normalize } from "node:path";
 import { createReadStream } from "node:fs";
 import { Readable } from "node:stream";
 import { renderMarkdown } from "./render.js";
+import { toggleCheckbox } from "./mutations.js";
 import {
   pageLayout,
   directoryListingHtml,
@@ -177,6 +178,21 @@ export function createApp(options: ServerOptions): Hono {
       return c.text("Not a renderable file", 400);
     } catch {
       return c.text("Not found", 404);
+    }
+  });
+
+  // Checkbox toggle endpoint
+  app.post("/__servmark/checkbox", async (c) => {
+    const body = await c.req.json<{ path: string; index: number; checked: boolean }>();
+    const filePath = resolveSafe(body.path);
+    if (!filePath) return c.json({ error: "Forbidden" }, 403);
+    if (!filePath.endsWith(".md")) return c.json({ error: "Not a markdown file" }, 400);
+
+    try {
+      await toggleCheckbox(filePath, body.index, body.checked);
+      return c.json({ ok: true });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
     }
   });
 

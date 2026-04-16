@@ -11,7 +11,7 @@ export async function initRenderer(): Promise<void> {
     typographer: true,
   });
 
-  md.use(taskLists);
+  md.use(taskLists, { enabled: true });
 
   md.use(
     await Shiki({

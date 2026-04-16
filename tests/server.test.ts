@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from "vitest";
 import { createApp, type ServerOptions } from "../src/server.js";
 import { initRenderer } from "../src/render.js";
-import { mkdtemp, writeFile, mkdir, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, mkdir, rm, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -91,5 +91,32 @@ describe("server", () => {
     expect(res.status).toBe(200);
     const html = await res.text();
     expect(html).toContain("file.txt");
+  });
+});
+
+describe("checkbox endpoint", () => {
+  it("toggles a checkbox in a markdown file", async () => {
+    await writeFile(join(testDir, "tasks.md"), "- [ ] first\n- [ ] second\n");
+    const app = makeApp();
+    const res = await app.request("/__servmark/checkbox", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: "/tasks.md", index: 1, checked: true }),
+    });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toEqual({ ok: true });
+    const content = await readFile(join(testDir, "tasks.md"), "utf-8");
+    expect(content).toBe("- [ ] first\n- [x] second\n");
+  });
+
+  it("rejects path traversal in checkbox endpoint", async () => {
+    const app = makeApp();
+    const res = await app.request("/__servmark/checkbox", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: "/../../../etc/passwd", index: 0, checked: true }),
+    });
+    expect(res.status).toBe(403);
   });
 });
