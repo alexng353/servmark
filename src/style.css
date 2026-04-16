@@ -54,19 +54,23 @@
    Reset & Base
    ============================================ */
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html, body {
+html,
+body {
   height: 100%;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
-    Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica,
+    Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   font-size: 16px;
   line-height: 1.6;
   color: var(--text);
@@ -161,7 +165,9 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .theme-toggle:hover {
@@ -175,10 +181,18 @@ a:hover {
 }
 
 /* Show/hide sun/moon based on theme */
-[data-theme="dark"] .icon-sun { display: block; }
-[data-theme="dark"] .icon-moon { display: none; }
-[data-theme="light"] .icon-sun { display: none; }
-[data-theme="light"] .icon-moon { display: block; }
+[data-theme="dark"] .icon-sun {
+  display: block;
+}
+[data-theme="dark"] .icon-moon {
+  display: none;
+}
+[data-theme="light"] .icon-sun {
+  display: none;
+}
+[data-theme="light"] .icon-moon {
+  display: block;
+}
 
 /* ============================================
    Sidebar Toggle
@@ -194,7 +208,9 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   flex-shrink: 0;
 }
 
@@ -287,12 +303,29 @@ a:hover {
   line-height: 1.3;
 }
 
-.markdown-body h1 { font-size: 2em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
-.markdown-body h2 { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
-.markdown-body h3 { font-size: 1.25em; }
-.markdown-body h4 { font-size: 1em; }
-.markdown-body h5 { font-size: 0.875em; }
-.markdown-body h6 { font-size: 0.85em; color: var(--text-secondary); }
+.markdown-body h1 {
+  font-size: 2em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+.markdown-body h2 {
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+.markdown-body h3 {
+  font-size: 1.25em;
+}
+.markdown-body h4 {
+  font-size: 1em;
+}
+.markdown-body h5 {
+  font-size: 0.875em;
+}
+.markdown-body h6 {
+  font-size: 0.85em;
+  color: var(--text-secondary);
+}
 
 .markdown-body p {
   margin-bottom: 16px;
@@ -320,7 +353,9 @@ a:hover {
 }
 
 .markdown-body code {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
   font-size: 85%;
   padding: 0.2em 0.4em;
   background: var(--code-bg);
@@ -419,7 +454,9 @@ a:hover {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: transform 0.2s ease, margin 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    margin 0.2s ease;
 }
 
 .sidebar-collapsed .docs-sidebar {
@@ -471,6 +508,35 @@ a:hover {
 
 .docs-content .markdown-body {
   max-width: 960px;
+}
+
+/* ============================================
+   Drag Handle
+   ============================================ */
+
+.grip-handle {
+  display: none;
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: grab;
+  color: var(--text-tertiary);
+  padding: 2px;
+  border-radius: 3px;
+}
+
+.grip-handle:hover {
+  color: var(--text-secondary);
+  background: var(--hover-bg);
+}
+
+.task-list-item:hover .grip-handle {
+  display: flex;
+}
+
+.task-list-item.dragging {
+  opacity: 0.4;
 }
 
 /* ============================================

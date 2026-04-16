@@ -118,6 +118,73 @@ function checkboxScript(): string {
 </script>`;
 }
 
+function reorderScript(): string {
+  return `<script>
+(function(){
+  var GRIP='<span class="grip-handle" draggable="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/></svg></span>';
+  var content=document.getElementById("content");
+
+  function initGrips(){
+    var items=content.querySelectorAll(".task-list-item");
+    items.forEach(function(li){
+      if(li.querySelector(".grip-handle"))return;
+      li.style.position="relative";
+      li.insertAdjacentHTML("afterbegin",GRIP);
+    });
+  }
+  initGrips();
+
+  var dragItem=null,dragList=null,fromIdx=-1;
+
+  content.addEventListener("dragstart",function(e){
+    var grip=e.target.closest(".grip-handle");
+    if(!grip){e.preventDefault();return}
+    dragItem=grip.closest(".task-list-item");
+    dragList=dragItem.closest("ul");
+    var siblings=dragList.querySelectorAll(":scope > .task-list-item");
+    for(var i=0;i<siblings.length;i++){if(siblings[i]===dragItem){fromIdx=i;break}}
+    dragItem.classList.add("dragging");
+    e.dataTransfer.effectAllowed="move";
+  });
+
+  content.addEventListener("dragover",function(e){
+    if(!dragItem)return;
+    e.preventDefault();
+    var target=e.target.closest(".task-list-item");
+    if(!target||target===dragItem||target.closest("ul")!==dragList)return;
+    var rect=target.getBoundingClientRect();
+    if(e.clientY<rect.top+rect.height/2){
+      dragList.insertBefore(dragItem,target);
+    }else{
+      dragList.insertBefore(dragItem,target.nextSibling);
+    }
+  });
+
+  content.addEventListener("dragend",function(){
+    if(!dragItem)return;
+    dragItem.classList.remove("dragging");
+    var allLists=content.querySelectorAll("ul.contains-task-list");
+    var listIdx=-1;
+    for(var i=0;i<allLists.length;i++){if(allLists[i]===dragList){listIdx=i;break}}
+    var siblings=dragList.querySelectorAll(":scope > .task-list-item");
+    var toIdx=-1;
+    for(var i=0;i<siblings.length;i++){if(siblings[i]===dragItem){toIdx=i;break}}
+    if(listIdx>=0&&toIdx>=0&&fromIdx!==toIdx){
+      var suppressed=Date.now();
+      var origSup=window.__smSuppressed;
+      window.__smSuppressed=function(){if(Date.now()-suppressed<500){window.__smSuppressed=origSup;return true}return origSup?origSup():false};
+      fetch("/__servmark/reorder",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({path:decodeURIComponent(window.location.pathname),listIndex:listIdx,fromIndex:fromIdx,toIndex:toIdx})
+      });
+    }
+    dragItem=null;dragList=null;fromIdx=-1;
+  });
+})();
+</script>`;
+}
+
 function liveReloadScript(): string {
   return `<script>
 (function(){
@@ -150,12 +217,14 @@ export function breadcrumbHtml(currentPath: string): string {
     if (i === segments.length - 1) {
       // Last segment is plain text (current)
       parts.push(
-        `<span class="breadcrumb-current">${escapeHtml(segments[i])}</span>`
+        `<span class="breadcrumb-current">${escapeHtml(segments[i])}</span>`,
       );
     } else {
       // Intermediate segments are clickable links
       const href = "/" + segments.slice(0, i + 1).join("/") + "/";
-      parts.push(`<a href="${escapeHtml(href)}">${escapeHtml(segments[i])}</a>`);
+      parts.push(
+        `<a href="${escapeHtml(href)}">${escapeHtml(segments[i])}</a>`,
+      );
     }
   }
 
@@ -200,6 +269,7 @@ export function pageLayout(options: PageOptions): string {
   ${sidebarToggleScript()}
   ${themeToggleScript()}
   ${checkboxScript()}
+  ${reorderScript()}
   ${options.liveReload ? liveReloadScript() : ""}
 </body>
 </html>`;
@@ -216,6 +286,7 @@ export function pageLayout(options: PageOptions): string {
   </main>
   ${themeToggleScript()}
   ${checkboxScript()}
+  ${reorderScript()}
   ${options.liveReload ? liveReloadScript() : ""}
 </body>
 </html>`;
@@ -233,7 +304,7 @@ function escapeHtml(str: string): string {
 
 export function directoryListingHtml(
   entries: DirEntry[],
-  currentPath: string
+  currentPath: string,
 ): string {
   const sorted = [...entries].sort((a, b) => {
     if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
@@ -243,9 +314,8 @@ export function directoryListingHtml(
   const rows = sorted
     .map((entry) => {
       const icon = entry.isDirectory ? FOLDER_ICON : FILE_ICON;
-      const href = currentPath === "/"
-        ? `/${entry.name}`
-        : `${currentPath}/${entry.name}`;
+      const href =
+        currentPath === "/" ? `/${entry.name}` : `${currentPath}/${entry.name}`;
       const size = entry.isDirectory ? "—" : formatSize(entry.size);
       const date = formatDate(entry.modified);
 
@@ -285,10 +355,7 @@ export function notFoundHtml(path: string): string {
 
 // Section 5: Docs sidebar template
 
-export function docsSidebarHtml(
-  mdFiles: string[],
-  activePath: string
-): string {
+export function docsSidebarHtml(mdFiles: string[], activePath: string): string {
   return mdFiles
     .map((file) => {
       const href = `/${file}`;

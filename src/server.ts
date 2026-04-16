@@ -5,7 +5,7 @@ import { join, resolve, relative, extname, normalize } from "node:path";
 import { createReadStream } from "node:fs";
 import { Readable } from "node:stream";
 import { renderMarkdown } from "./render.js";
-import { toggleCheckbox } from "./mutations.js";
+import { toggleCheckbox, reorderTaskItem } from "./mutations.js";
 import {
   pageLayout,
   directoryListingHtml,
@@ -53,10 +53,15 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 function getMimeType(filePath: string): string {
-  return MIME_TYPES[extname(filePath).toLowerCase()] || "application/octet-stream";
+  return (
+    MIME_TYPES[extname(filePath).toLowerCase()] || "application/octet-stream"
+  );
 }
 
-async function findMarkdownFiles(rootDir: string, rules: ReturnType<typeof loadIgnoreRules>): Promise<string[]> {
+async function findMarkdownFiles(
+  rootDir: string,
+  rules: ReturnType<typeof loadIgnoreRules>,
+): Promise<string[]> {
   const files: string[] = [];
   async function walk(dir: string): Promise<void> {
     const entries = await readdir(dir, { withFileTypes: true });
@@ -94,7 +99,12 @@ export function createApp(options: ServerOptions): Hono {
 
   // Wrap app.request to catch path traversal before URL normalization strips ".."
   const originalRequest = app.request.bind(app);
-  app.request = (input: string | Request | URL, ...rest: Parameters<typeof originalRequest> extends [unknown, ...infer R] ? R : never) => {
+  app.request = (
+    input: string | Request | URL,
+    ...rest: Parameters<typeof originalRequest> extends [unknown, ...infer R]
+      ? R
+      : never
+  ) => {
     if (typeof input === "string" && !input.startsWith("http")) {
       const parts = input.split("/");
       if (parts.some((p) => p === "..")) {
@@ -111,7 +121,12 @@ export function createApp(options: ServerOptions): Hono {
     return mdFileCache;
   }
 
-  function makePage(content: string, title: string, currentPath: string, sidebar?: string): string {
+  function makePage(
+    content: string,
+    title: string,
+    currentPath: string,
+    sidebar?: string,
+  ): string {
     const opts: PageOptions = {
       title,
       content,
@@ -166,14 +181,21 @@ export function createApp(options: ServerOptions): Hono {
         const dirEntries: DirEntry[] = await Promise.all(
           entries.map(async (e) => {
             const s = await stat(join(filePath, e.name));
-            return { name: e.name, isDirectory: e.isDirectory(), size: s.size, modified: s.mtime };
-          })
+            return {
+              name: e.name,
+              isDirectory: e.isDirectory(),
+              size: s.size,
+              modified: s.mtime,
+            };
+          }),
         );
         return c.html(directoryListingHtml(dirEntries, requestPath));
       }
       if (filePath.endsWith(".md")) {
         const content = await readFile(filePath, "utf-8");
-        return c.html(`<div class="markdown-body">${renderMarkdown(content)}</div>`);
+        return c.html(
+          `<div class="markdown-body">${renderMarkdown(content)}</div>`,
+        );
       }
       return c.text("Not a renderable file", 400);
     } catch {
@@ -183,13 +205,44 @@ export function createApp(options: ServerOptions): Hono {
 
   // Checkbox toggle endpoint
   app.post("/__servmark/checkbox", async (c) => {
-    const body = await c.req.json<{ path: string; index: number; checked: boolean }>();
+    const body = await c.req.json<{
+      path: string;
+      index: number;
+      checked: boolean;
+    }>();
     const filePath = resolveSafe(body.path);
     if (!filePath) return c.json({ error: "Forbidden" }, 403);
-    if (!filePath.endsWith(".md")) return c.json({ error: "Not a markdown file" }, 400);
+    if (!filePath.endsWith(".md"))
+      return c.json({ error: "Not a markdown file" }, 400);
 
     try {
       await toggleCheckbox(filePath, body.index, body.checked);
+      return c.json({ ok: true });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  });
+
+  // Reorder task list items endpoint
+  app.post("/__servmark/reorder", async (c) => {
+    const body = await c.req.json<{
+      path: string;
+      listIndex: number;
+      fromIndex: number;
+      toIndex: number;
+    }>();
+    const filePath = resolveSafe(body.path);
+    if (!filePath) return c.json({ error: "Forbidden" }, 403);
+    if (!filePath.endsWith(".md"))
+      return c.json({ error: "Not a markdown file" }, 400);
+
+    try {
+      await reorderTaskItem(
+        filePath,
+        body.listIndex,
+        body.fromIndex,
+        body.toIndex,
+      );
       return c.json({ ok: true });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 400);
@@ -210,18 +263,27 @@ export function createApp(options: ServerOptions): Hono {
         const dirEntries: DirEntry[] = await Promise.all(
           entries.map(async (e) => {
             const s = await stat(join(filePath, e.name));
-            return { name: e.name, isDirectory: e.isDirectory(), size: s.size, modified: s.mtime };
-          })
+            return {
+              name: e.name,
+              isDirectory: e.isDirectory(),
+              size: s.size,
+              modified: s.mtime,
+            };
+          }),
         );
         const content = directoryListingHtml(dirEntries, requestPath);
-        const sidebar = docsMode ? docsSidebarHtml(await getMdFiles(), requestPath) : undefined;
+        const sidebar = docsMode
+          ? docsSidebarHtml(await getMdFiles(), requestPath)
+          : undefined;
         return c.html(makePage(content, requestPath, requestPath, sidebar));
       }
 
       if (filePath.endsWith(".md")) {
         const raw = await readFile(filePath, "utf-8");
         const rendered = `<div class="markdown-body">${renderMarkdown(raw)}</div>`;
-        const sidebar = docsMode ? docsSidebarHtml(await getMdFiles(), requestPath) : undefined;
+        const sidebar = docsMode
+          ? docsSidebarHtml(await getMdFiles(), requestPath)
+          : undefined;
         const name = filePath.split("/").pop() || requestPath;
         return c.html(makePage(rendered, name, requestPath, sidebar));
       }
@@ -235,7 +297,9 @@ export function createApp(options: ServerOptions): Hono {
       });
     } catch {
       const content = notFoundHtml(requestPath);
-      const sidebar = docsMode ? docsSidebarHtml(await getMdFiles(), requestPath) : undefined;
+      const sidebar = docsMode
+        ? docsSidebarHtml(await getMdFiles(), requestPath)
+        : undefined;
       return c.html(makePage(content, "404", requestPath, sidebar), 404);
     }
   });

@@ -115,8 +115,35 @@ describe("checkbox endpoint", () => {
     const res = await app.request("/__servmark/checkbox", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: "/../../../etc/passwd", index: 0, checked: true }),
+      body: JSON.stringify({
+        path: "/../../../etc/passwd",
+        index: 0,
+        checked: true,
+      }),
     });
     expect(res.status).toBe(403);
+  });
+});
+
+describe("reorder endpoint", () => {
+  it("reorders task items in a markdown file", async () => {
+    await writeFile(
+      join(testDir, "tasks.md"),
+      "- [ ] first\n- [ ] second\n- [ ] third\n",
+    );
+    const app = makeApp();
+    const res = await app.request("/__servmark/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: "/tasks.md",
+        listIndex: 0,
+        fromIndex: 0,
+        toIndex: 2,
+      }),
+    });
+    expect(res.status).toBe(200);
+    const content = await readFile(join(testDir, "tasks.md"), "utf-8");
+    expect(content).toBe("- [ ] second\n- [ ] third\n- [ ] first\n");
   });
 });
