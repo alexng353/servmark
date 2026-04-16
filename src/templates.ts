@@ -76,6 +76,23 @@ document.getElementById("theme-toggle").addEventListener("click",function(){
 </script>`;
 }
 
+function sidebarToggleScript(): string {
+  return `<script>
+(function(){
+  var layout=document.getElementById("docs-layout");
+  var btn=document.getElementById("sidebar-toggle");
+  var key="servmark-sidebar";
+  if(localStorage.getItem(key)==="collapsed"){
+    layout.classList.add("sidebar-collapsed");
+  }
+  btn.addEventListener("click",function(){
+    layout.classList.toggle("sidebar-collapsed");
+    localStorage.setItem(key,layout.classList.contains("sidebar-collapsed")?"collapsed":"open");
+  });
+})();
+</script>`;
+}
+
 function liveReloadScript(): string {
   return `<script>
 (function(){
@@ -135,12 +152,17 @@ export function pageLayout(options: PageOptions): string {
   if (options.docsMode && options.sidebar) {
     return `${head}
 <body>
-  <div class="docs-layout">
-    <nav class="docs-sidebar">
-      <div class="sidebar-header">
-        <span>servmark</span>
-        ${themeToggleButton()}
-      </div>
+  <header class="page-header">
+    <div class="page-header-left">
+      <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      ${breadcrumbHtml(options.currentPath || "/")}
+    </div>
+    ${themeToggleButton()}
+  </header>
+  <div class="docs-layout" id="docs-layout">
+    <nav class="docs-sidebar" id="docs-sidebar">
       <ul class="sidebar-list">
         ${options.sidebar}
       </ul>
@@ -149,6 +171,7 @@ export function pageLayout(options: PageOptions): string {
       <div id="content">${options.content}</div>
     </main>
   </div>
+  ${sidebarToggleScript()}
   ${themeToggleScript()}
   ${options.liveReload ? liveReloadScript() : ""}
 </body>
