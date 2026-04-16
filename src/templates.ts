@@ -199,31 +199,32 @@ function commentHighlightScript(): string {
       if(!lines)return;
       var lineNums=lines.split(",").map(Number);
 
-      // Walk forward from the comment card through sibling elements
+      // Collect the sibling elements that should be highlighted
       var sibling=card.nextElementSibling;
       var relIdx=0;
-      var highlighted=[];
+      var toWrap=[];
       while(sibling&&relIdx<=Math.max.apply(null,lineNums)){
         if(lineNums.indexOf(relIdx)>=0){
-          sibling.classList.add("sm-highlighted");
-          sibling.setAttribute("data-comment-id",id);
-          highlighted.push(sibling);
+          toWrap.push(sibling);
         }
         relIdx++;
         sibling=sibling.nextElementSibling;
       }
 
-      // Hover interactions
-      card.addEventListener("mouseenter",function(){
-        highlighted.forEach(function(el){el.classList.add("flash")});
-      });
-      card.addEventListener("mouseleave",function(){
-        highlighted.forEach(function(el){el.classList.remove("flash")});
-      });
-      highlighted.forEach(function(el){
-        el.addEventListener("mouseenter",function(){card.classList.add("highlight")});
-        el.addEventListener("mouseleave",function(){card.classList.remove("highlight")});
-      });
+      if(!toWrap.length)return;
+
+      // Wrap all highlighted elements in a single group div
+      var group=document.createElement("div");
+      group.className="sm-highlight-group";
+      group.setAttribute("data-comment-id",id);
+      toWrap[0].parentNode.insertBefore(group,toWrap[0]);
+      toWrap.forEach(function(el){group.appendChild(el)});
+
+      // Hover: group <-> card
+      card.addEventListener("mouseenter",function(){group.classList.add("flash")});
+      card.addEventListener("mouseleave",function(){group.classList.remove("flash")});
+      group.addEventListener("mouseenter",function(){card.classList.add("highlight")});
+      group.addEventListener("mouseleave",function(){card.classList.remove("highlight")});
     });
   }
   initHighlights();
@@ -302,9 +303,37 @@ function commentEditorScript(): string {
     selBar.style.height=(bot-top)+"px";
   }
 
-  function showEditor(commentId,beforeEl,startLine,endLine){
+  function clearPending(){
+    mdBody.querySelectorAll(".sm-pending-highlight").forEach(function(el){el.classList.remove("sm-pending-highlight")});
+  }
+
+  function addPending(startLine,endLine){
+    if(startLine===null||endLine===null)return;
+    var blocks=getBlockElements();
+    blocks.forEach(function(el){
+      var ln=parseInt(el.getAttribute("data-source-line"));
+      if(ln>=startLine&&ln<=endLine)el.classList.add("sm-pending-highlight");
+    });
+  }
+
+  function closeEditor(){
     var existing=mdBody.querySelector(".sm-comment-editor");
     if(existing)existing.remove();
+    clearPending();
+  }
+
+  function submitEditor(editor,isEdit,commentId,startLine,endLine){
+    var text=editor.querySelector("textarea").value.trim();
+    if(!text){closeEditor();return}
+    var payload=isEdit
+      ?{path:decodeURIComponent(window.location.pathname),commentIndex:parseInt(commentId),body:text}
+      :{path:decodeURIComponent(window.location.pathname),startLine:startLine,endLine:endLine,body:text};
+    fetch("/__servmark/comment",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
+      .then(function(){location.reload()});
+  }
+
+  function showEditor(commentId,beforeEl,startLine,endLine){
+    closeEditor();
     var editor=document.createElement("div");
     editor.className="sm-comment-editor";
     var isEdit=commentId!==null;
@@ -317,18 +346,16 @@ function commentEditorScript(): string {
       +(isEdit?'<button class="sm-btn-delete">Delete</button>':'')
       +'<button class="sm-btn-cancel">Cancel</button><button class="sm-btn-save">'+(isEdit?"Save":"Add")+'</button></div>';
     beforeEl.parentNode.insertBefore(editor,beforeEl);
-    editor.querySelector("textarea").focus();
+    addPending(startLine,endLine);
+    var ta=editor.querySelector("textarea");
+    ta.focus();
 
-    editor.querySelector(".sm-btn-cancel").addEventListener("click",function(){editor.remove()});
-    editor.querySelector(".sm-btn-save").addEventListener("click",function(){
-      var text=editor.querySelector("textarea").value.trim();
-      if(!text){editor.remove();return}
-      var payload=isEdit
-        ?{path:decodeURIComponent(window.location.pathname),commentIndex:parseInt(commentId),body:text}
-        :{path:decodeURIComponent(window.location.pathname),startLine:startLine,endLine:endLine,body:text};
-      fetch("/__servmark/comment",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
-        .then(function(){location.reload()});
+    ta.addEventListener("keydown",function(e){
+      if(e.key==="Escape"){closeEditor();e.preventDefault()}
+      if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){submitEditor(editor,isEdit,commentId,startLine,endLine);e.preventDefault()}
     });
+    editor.querySelector(".sm-btn-cancel").addEventListener("click",function(){closeEditor()});
+    editor.querySelector(".sm-btn-save").addEventListener("click",function(){submitEditor(editor,isEdit,commentId,startLine,endLine)});
     if(isEdit){
       editor.querySelector(".sm-btn-delete").addEventListener("click",function(){
         fetch("/__servmark/comment",{method:"POST",headers:{"Content-Type":"application/json"},

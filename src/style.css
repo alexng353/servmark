@@ -416,6 +416,10 @@ a:hover {
   margin-left: -1.5em;
 }
 
+.markdown-body .contains-task-list .contains-task-list .task-list-item {
+  margin-left: 0.5em;
+}
+
 .markdown-body .task-list-item input[type="checkbox"] {
   margin-right: 0.5em;
   vertical-align: middle;
@@ -574,15 +578,24 @@ a:hover {
   margin-bottom: 0;
 }
 
-.sm-highlighted {
+.sm-highlight-group {
   border-left: 4px solid var(--link);
   padding-left: 12px;
   margin-left: -16px;
   transition: background 0.2s;
+  cursor: pointer;
 }
 
-.sm-highlighted.flash {
+.sm-highlight-group:hover,
+.sm-highlight-group.flash {
   background: var(--sidebar-active);
+}
+
+.sm-pending-highlight {
+  border-left: 4px solid var(--badge-text);
+  padding-left: 12px;
+  margin-left: -16px;
+  background: var(--badge-bg);
 }
 
 /* ============================================
