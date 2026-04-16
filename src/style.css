@@ -586,6 +586,106 @@ a:hover {
 }
 
 /* ============================================
+   Comment Gutter & Editor
+   ============================================ */
+
+.markdown-body {
+  position: relative;
+}
+
+.sm-gutter {
+  position: absolute;
+  left: -20px;
+  top: 0;
+  width: 16px;
+  height: 100%;
+  cursor: crosshair;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.markdown-body:hover .sm-gutter {
+  opacity: 1;
+}
+
+.sm-gutter-selection {
+  position: absolute;
+  left: -20px;
+  width: 4px;
+  background: var(--link);
+  border-radius: 2px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.sm-comment-editor {
+  background: var(--bg-secondary);
+  border: 1px solid var(--link);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.sm-comment-editor textarea {
+  width: 100%;
+  min-height: 60px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.sm-comment-editor-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+.sm-comment-editor-actions button {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+
+.sm-btn-save {
+  background: var(--link);
+  color: #fff;
+  border-color: var(--link) !important;
+}
+
+.sm-btn-save:hover {
+  opacity: 0.9;
+}
+
+.sm-btn-cancel {
+  background: var(--bg);
+  color: var(--text-secondary);
+}
+
+.sm-btn-cancel:hover {
+  background: var(--hover-bg);
+}
+
+.sm-btn-delete {
+  background: none;
+  color: var(--danger);
+  border-color: var(--danger) !important;
+  margin-right: auto;
+}
+
+.sm-btn-delete:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* ============================================
    404 Page
    ============================================ */
 

@@ -231,6 +231,124 @@ function commentHighlightScript(): string {
 </script>`;
 }
 
+function commentEditorScript(): string {
+  return `<script>
+(function(){
+  var content=document.getElementById("content");
+  if(!content)return;
+  var mdBody=content.querySelector(".markdown-body");
+  if(!mdBody)return;
+
+  // Add gutter element
+  var gutter=document.createElement("div");
+  gutter.className="sm-gutter";
+  mdBody.appendChild(gutter);
+
+  var selecting=false,startEl=null,endEl=null,selBar=null;
+
+  function getBlockElements(){
+    return Array.from(mdBody.querySelectorAll("[data-source-line]"));
+  }
+
+  function getBlockAtY(y){
+    var blocks=getBlockElements();
+    for(var i=0;i<blocks.length;i++){
+      var r=blocks[i].getBoundingClientRect();
+      if(y>=r.top&&y<=r.bottom)return blocks[i];
+    }
+    return null;
+  }
+
+  gutter.addEventListener("mousedown",function(e){
+    var block=getBlockAtY(e.clientY);
+    if(!block)return;
+    selecting=true;
+    startEl=block;
+    endEl=block;
+    selBar=document.createElement("div");
+    selBar.className="sm-gutter-selection";
+    mdBody.appendChild(selBar);
+    updateSelBar();
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove",function(e){
+    if(!selecting)return;
+    var block=getBlockAtY(e.clientY);
+    if(block)endEl=block;
+    updateSelBar();
+  });
+
+  document.addEventListener("mouseup",function(){
+    if(!selecting)return;
+    selecting=false;
+    if(selBar){selBar.remove();selBar=null}
+    if(!startEl||!endEl)return;
+    var startLine=parseInt(startEl.getAttribute("data-source-line"));
+    var endLine=parseInt(endEl.getAttribute("data-source-line"));
+    if(startLine>endLine){var t=startLine;startLine=endLine;endLine=t;var te=startEl;startEl=endEl;endEl=te}
+    showEditor(null,startEl,startLine,endLine);
+    startEl=null;endEl=null;
+  });
+
+  function updateSelBar(){
+    if(!selBar||!startEl||!endEl)return;
+    var r1=startEl.getBoundingClientRect();
+    var r2=endEl.getBoundingClientRect();
+    var top=Math.min(r1.top,r2.top);
+    var bot=Math.max(r1.bottom,r2.bottom);
+    var pr=mdBody.getBoundingClientRect();
+    selBar.style.top=(top-pr.top)+"px";
+    selBar.style.height=(bot-top)+"px";
+  }
+
+  function showEditor(commentId,beforeEl,startLine,endLine){
+    var existing=mdBody.querySelector(".sm-comment-editor");
+    if(existing)existing.remove();
+    var editor=document.createElement("div");
+    editor.className="sm-comment-editor";
+    var isEdit=commentId!==null;
+    var body="";
+    if(isEdit){
+      var card=mdBody.querySelector('.sm-comment[data-comment-id="'+commentId+'"]');
+      if(card)body=card.querySelector(".sm-comment-body").textContent.trim();
+    }
+    editor.innerHTML='<textarea placeholder="Add a comment...">'+body.replace(/</g,"&lt;")+'</textarea><div class="sm-comment-editor-actions">'
+      +(isEdit?'<button class="sm-btn-delete">Delete</button>':'')
+      +'<button class="sm-btn-cancel">Cancel</button><button class="sm-btn-save">'+(isEdit?"Save":"Add")+'</button></div>';
+    beforeEl.parentNode.insertBefore(editor,beforeEl);
+    editor.querySelector("textarea").focus();
+
+    editor.querySelector(".sm-btn-cancel").addEventListener("click",function(){editor.remove()});
+    editor.querySelector(".sm-btn-save").addEventListener("click",function(){
+      var text=editor.querySelector("textarea").value.trim();
+      if(!text){editor.remove();return}
+      var payload=isEdit
+        ?{path:decodeURIComponent(window.location.pathname),commentIndex:parseInt(commentId),body:text}
+        :{path:decodeURIComponent(window.location.pathname),startLine:startLine,endLine:endLine,body:text};
+      fetch("/__servmark/comment",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
+        .then(function(){location.reload()});
+    });
+    if(isEdit){
+      editor.querySelector(".sm-btn-delete").addEventListener("click",function(){
+        fetch("/__servmark/comment",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({path:decodeURIComponent(window.location.pathname),commentIndex:parseInt(commentId),delete:true})})
+          .then(function(){location.reload()});
+      });
+    }
+  }
+
+  // Click existing comment to edit
+  mdBody.addEventListener("click",function(e){
+    var card=e.target.closest(".sm-comment");
+    if(!card)return;
+    var id=card.getAttribute("data-comment-id");
+    showEditor(id,card,null,null);
+  });
+})();
+</script>`;
+}
+
 function liveReloadScript(): string {
   return `<script>
 (function(){
@@ -317,6 +435,7 @@ export function pageLayout(options: PageOptions): string {
   ${checkboxScript()}
   ${reorderScript()}
   ${commentHighlightScript()}
+  ${commentEditorScript()}
   ${options.liveReload ? liveReloadScript() : ""}
 </body>
 </html>`;
@@ -335,6 +454,7 @@ export function pageLayout(options: PageOptions): string {
   ${checkboxScript()}
   ${reorderScript()}
   ${commentHighlightScript()}
+  ${commentEditorScript()}
   ${options.liveReload ? liveReloadScript() : ""}
 </body>
 </html>`;
