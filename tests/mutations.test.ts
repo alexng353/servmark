@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { toggleCheckbox } from "../src/mutations.js";
+import { toggleCheckbox, reorderTaskItem } from "../src/mutations.js";
 import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -52,5 +52,45 @@ describe("toggleCheckbox", () => {
     const file = join(testDir, "test.md");
     await writeFile(file, "- [ ] only one\n");
     await expect(toggleCheckbox(file, 5, true)).rejects.toThrow();
+  });
+});
+
+describe("reorderTaskItem", () => {
+  it("moves an item down within a list", async () => {
+    const file = join(testDir, "test.md");
+    await writeFile(file, "- [ ] first\n- [ ] second\n- [ ] third\n");
+    await reorderTaskItem(file, 0, 0, 2);
+    const result = await readFile(file, "utf-8");
+    expect(result).toBe("- [ ] second\n- [ ] third\n- [ ] first\n");
+  });
+
+  it("moves an item up within a list", async () => {
+    const file = join(testDir, "test.md");
+    await writeFile(file, "- [ ] first\n- [ ] second\n- [ ] third\n");
+    await reorderTaskItem(file, 0, 2, 0);
+    const result = await readFile(file, "utf-8");
+    expect(result).toBe("- [ ] third\n- [ ] first\n- [ ] second\n");
+  });
+
+  it("preserves content around the task list", async () => {
+    const file = join(testDir, "test.md");
+    await writeFile(file, "# Title\n\n- [ ] a\n- [ ] b\n\nFooter\n");
+    await reorderTaskItem(file, 0, 0, 1);
+    const result = await readFile(file, "utf-8");
+    expect(result).toBe("# Title\n\n- [ ] b\n- [ ] a\n\nFooter\n");
+  });
+
+  it("handles multiple separate task lists (listIndex)", async () => {
+    const file = join(testDir, "test.md");
+    await writeFile(file, "- [ ] a\n- [ ] b\n\nText\n\n- [ ] c\n- [ ] d\n");
+    await reorderTaskItem(file, 1, 0, 1);
+    const result = await readFile(file, "utf-8");
+    expect(result).toBe("- [ ] a\n- [ ] b\n\nText\n\n- [ ] d\n- [ ] c\n");
+  });
+
+  it("throws on invalid listIndex", async () => {
+    const file = join(testDir, "test.md");
+    await writeFile(file, "- [ ] only\n");
+    await expect(reorderTaskItem(file, 5, 0, 0)).rejects.toThrow();
   });
 });
