@@ -220,10 +220,13 @@ function commentHighlightScript(): string {
       toWrap[0].parentNode.insertBefore(group,toWrap[0]);
       toWrap.forEach(function(el){group.appendChild(el)});
 
-      // Hover: group <-> card
+      // Hover: group <-> card (ignore grip-handle to avoid overlap with drag handle)
       card.addEventListener("mouseenter",function(){group.classList.add("flash")});
       card.addEventListener("mouseleave",function(){group.classList.remove("flash")});
-      group.addEventListener("mouseenter",function(){card.classList.add("highlight")});
+      group.addEventListener("mouseover",function(e){
+        if(e.target.closest(".grip-handle")){card.classList.remove("highlight")}
+        else{card.classList.add("highlight")}
+      });
       group.addEventListener("mouseleave",function(){card.classList.remove("highlight")});
     });
   }
