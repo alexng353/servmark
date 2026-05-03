@@ -249,6 +249,34 @@ function commentEditorScript(): string {
   mdBody.appendChild(gutter);
 
   var selecting=false,startEl=null,endEl=null,selBar=null;
+  var scrollKey="servmark-comment-scroll:"+window.location.pathname;
+
+  function getScrollContainer(){return document.querySelector(".docs-content")||window}
+
+  function currentScrollTop(){
+    var target=getScrollContainer();
+    return target===window?window.scrollY:target.scrollTop;
+  }
+
+  function setScrollTop(y){
+    var target=getScrollContainer();
+    if(target===window)window.scrollTo(0,y);
+    else target.scrollTop=y;
+  }
+
+  function restoreScroll(){
+    var saved=sessionStorage.getItem(scrollKey);
+    if(saved===null)return;
+    sessionStorage.removeItem(scrollKey);
+    var y=parseInt(saved,10);
+    if(isNaN(y))return;
+    requestAnimationFrame(function(){setScrollTop(y)});
+  }
+
+  function reloadKeepingScroll(){
+    sessionStorage.setItem(scrollKey,String(currentScrollTop()));
+    location.reload();
+  }
 
   function getBlockElements(){
     return Array.from(mdBody.querySelectorAll("[data-source-line]"));
@@ -332,7 +360,7 @@ function commentEditorScript(): string {
       ?{path:decodeURIComponent(window.location.pathname),commentIndex:parseInt(commentId),body:text}
       :{path:decodeURIComponent(window.location.pathname),startLine:startLine,endLine:endLine,body:text};
     fetch("/__servmark/comment",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
-      .then(function(){location.reload()});
+      .then(function(){reloadKeepingScroll()});
   }
 
   function showEditor(commentId,beforeEl,startLine,endLine){
@@ -363,7 +391,7 @@ function commentEditorScript(): string {
       editor.querySelector(".sm-btn-delete").addEventListener("click",function(){
         fetch("/__servmark/comment",{method:"POST",headers:{"Content-Type":"application/json"},
           body:JSON.stringify({path:decodeURIComponent(window.location.pathname),commentIndex:parseInt(commentId),delete:true})})
-          .then(function(){location.reload()});
+          .then(function(){reloadKeepingScroll()});
       });
     }
   }
@@ -375,6 +403,7 @@ function commentEditorScript(): string {
     var id=card.getAttribute("data-comment-id");
     showEditor(id,card,null,null);
   });
+  restoreScroll();
 })();
 </script>`;
 }
