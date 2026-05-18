@@ -128,6 +128,18 @@ describe("updateComment", () => {
     expect(result).not.toContain("Old body");
     expect(result).toContain("relativeLines: +0..=0");
   });
+
+  it("preserves the placeholder line when updating the body", async () => {
+    const file = join(testDir, "test.md");
+    await writeFile(
+      file,
+      `{::comment}\nrelativeLines: +0..=0\nplaceholder: "Answer here"\n---\n\n{:/comment}\nContent\n`
+    );
+    await updateComment(file, 0, "User's actual answer");
+    const result = await readFile(file, "utf-8");
+    expect(result).toContain(`placeholder: "Answer here"`);
+    expect(result).toContain("User's actual answer");
+  });
 });
 
 describe("deleteComment", () => {
@@ -152,5 +164,23 @@ describe("deleteComment", () => {
     expect(result).not.toContain("Second");
     expect(result).toContain("A");
     expect(result).toContain("B");
+  });
+
+  it("ignores comment delimiters inside fenced code blocks when indexing", async () => {
+    const file = join(testDir, "test.md");
+    // First "comment" is inside a fenced code block (an example) - it should
+    // not be counted. Index 0 should refer to the real comment below.
+    await writeFile(
+      file,
+      "Example:\n\n```\n{::comment}\nrelativeLines: +0..=0\n---\nFake\n{:/comment}\n```\n\n{::comment}\nrelativeLines: +0..=0\n---\nReal\n{:/comment}\nContent\n"
+    );
+    await deleteComment(file, 0);
+    const result = await readFile(file, "utf-8");
+    // The fake (in-fence) comment stays put.
+    expect(result).toContain("Fake");
+    expect(result).toContain("```");
+    // The real comment is removed.
+    expect(result).not.toContain("Real");
+    expect(result).toContain("Content");
   });
 });

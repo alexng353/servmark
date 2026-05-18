@@ -2,6 +2,7 @@ import MarkdownIt from "markdown-it";
 import Shiki from "@shikijs/markdown-it";
 import taskLists from "markdown-it-task-lists";
 import { commentPlugin } from "./comment-plugin.js";
+import { extractFrontmatter, renderFrontmatter } from "./frontmatter.js";
 
 let md: MarkdownIt;
 
@@ -49,5 +50,7 @@ export async function initRenderer(): Promise<void> {
 }
 
 export function renderMarkdown(content: string): string {
-  return md.render(content);
+  const { data, body } = extractFrontmatter(content);
+  const header = data ? renderFrontmatter(data) : "";
+  return header + md.render(body);
 }

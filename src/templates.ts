@@ -133,6 +133,7 @@ function reorderScript(): string {
     });
   }
   initGrips();
+  document.addEventListener("sm:content-updated",initGrips);
 
   var dragItem=null,dragList=null,fromIdx=-1;
 
@@ -194,20 +195,39 @@ function commentHighlightScript(): string {
   function initHighlights(){
     var comments=content.querySelectorAll(".sm-comment");
     comments.forEach(function(card){
+      if(card.dataset.smHlInit)return;
+      card.dataset.smHlInit="1";
+
       var id=card.getAttribute("data-comment-id");
       var lines=card.getAttribute("data-lines");
       if(!lines)return;
-      var lineNums=lines.split(",").map(Number);
+      var lineNums=lines.split(",").map(Number).filter(function(n){return!isNaN(n)});
+      if(!lineNums.length)return;
+      var maxRel=Math.max.apply(null,lineNums);
+      var anchorAttr=card.getAttribute("data-source-line");
+      if(anchorAttr===null)return;
+      var anchor=parseInt(anchorAttr);
+      if(isNaN(anchor))return;
 
-      // Collect the sibling elements that should be highlighted
+      // Walk forward siblings, matching by source-line offset (not sibling count).
+      // A sibling block at source line L has relative offset (L - anchor).
       var sibling=card.nextElementSibling;
-      var relIdx=0;
       var toWrap=[];
-      while(sibling&&relIdx<=Math.max.apply(null,lineNums)){
-        if(lineNums.indexOf(relIdx)>=0){
+      while(sibling){
+        if(sibling.classList&&sibling.classList.contains("sm-comment")){
+          sibling=sibling.nextElementSibling;
+          continue;
+        }
+        var srcAttr=sibling.getAttribute("data-source-line");
+        if(srcAttr===null){
+          sibling=sibling.nextElementSibling;
+          continue;
+        }
+        var rel=parseInt(srcAttr)-anchor;
+        if(rel>maxRel)break;
+        if(rel>=0&&lineNums.indexOf(rel)>=0){
           toWrap.push(sibling);
         }
-        relIdx++;
         sibling=sibling.nextElementSibling;
       }
 
@@ -231,6 +251,7 @@ function commentHighlightScript(): string {
     });
   }
   initHighlights();
+  document.addEventListener("sm:content-updated",initHighlights);
 })();
 </script>`;
 }
@@ -238,17 +259,12 @@ function commentHighlightScript(): string {
 function commentEditorScript(): string {
   return `<script>
 (function(){
+  var COMMENT_GRIP='<span class="sm-comment-grip" aria-label="Edit comment"><svg width="16" height="10" viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="5" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="11" r="1"/><circle cx="12" cy="11" r="1"/><circle cx="19" cy="11" r="1"/></svg></span>';
   var content=document.getElementById("content");
   if(!content)return;
-  var mdBody=content.querySelector(".markdown-body");
-  if(!mdBody)return;
 
-  // Add gutter element
-  var gutter=document.createElement("div");
-  gutter.className="sm-gutter";
-  mdBody.appendChild(gutter);
-
-  var selecting=false,startEl=null,endEl=null,selBar=null;
+  var mdBody=null,gutter=null;
+  var selecting=false,startEl=null,endEl=null,selBar=null,hoverBar=null;
   var scrollKey="servmark-comment-scroll:"+window.location.pathname;
 
   function getScrollContainer(){return document.querySelector(".docs-content")||window}
@@ -278,8 +294,16 @@ function commentEditorScript(): string {
     location.reload();
   }
 
+  function getMdBody(){return content.querySelector(".markdown-body")}
+
   function getBlockElements(){
-    return Array.from(mdBody.querySelectorAll("[data-source-line]"));
+    if(!mdBody)return[];
+    // Exclude the comment cards themselves and any [data-source-line] inside
+    // them (comment bodies render block markdown which carries source-line
+    // attrs from their own sub-render — not relevant to the document gutter).
+    return Array.from(mdBody.querySelectorAll("[data-source-line]")).filter(function(el){
+      return !el.closest(".sm-comment");
+    });
   }
 
   function getBlockAtY(y){
@@ -291,40 +315,25 @@ function commentEditorScript(): string {
     return null;
   }
 
-  gutter.addEventListener("mousedown",function(e){
-    var block=getBlockAtY(e.clientY);
-    if(!block)return;
-    selecting=true;
-    startEl=block;
-    endEl=block;
-    selBar=document.createElement("div");
-    selBar.className="sm-gutter-selection";
-    mdBody.appendChild(selBar);
-    updateSelBar();
-    e.preventDefault();
-  });
+  function removeHoverBar(){
+    if(hoverBar){hoverBar.remove();hoverBar=null}
+  }
 
-  document.addEventListener("mousemove",function(e){
-    if(!selecting)return;
-    var block=getBlockAtY(e.clientY);
-    if(block)endEl=block;
-    updateSelBar();
-  });
-
-  document.addEventListener("mouseup",function(){
-    if(!selecting)return;
-    selecting=false;
-    if(selBar){selBar.remove();selBar=null}
-    if(!startEl||!endEl)return;
-    var startLine=parseInt(startEl.getAttribute("data-source-line"));
-    var endLine=parseInt(endEl.getAttribute("data-source-line"));
-    if(startLine>endLine){var t=startLine;startLine=endLine;endLine=t;var te=startEl;startEl=endEl;endEl=te}
-    showEditor(null,startEl,startLine,endLine);
-    startEl=null;endEl=null;
-  });
+  function showHoverBar(block){
+    if(!block||!mdBody){removeHoverBar();return}
+    if(!hoverBar||!mdBody.contains(hoverBar)){
+      hoverBar=document.createElement("div");
+      hoverBar.className="sm-gutter-hover";
+      mdBody.appendChild(hoverBar);
+    }
+    var r=block.getBoundingClientRect();
+    var pr=mdBody.getBoundingClientRect();
+    hoverBar.style.top=(r.top-pr.top)+"px";
+    hoverBar.style.height=r.height+"px";
+  }
 
   function updateSelBar(){
-    if(!selBar||!startEl||!endEl)return;
+    if(!selBar||!startEl||!endEl||!mdBody)return;
     var r1=startEl.getBoundingClientRect();
     var r2=endEl.getBoundingClientRect();
     var top=Math.min(r1.top,r2.top);
@@ -335,6 +344,7 @@ function commentEditorScript(): string {
   }
 
   function clearPending(){
+    if(!mdBody)return;
     mdBody.querySelectorAll(".sm-pending-highlight").forEach(function(el){el.classList.remove("sm-pending-highlight")});
   }
 
@@ -348,6 +358,7 @@ function commentEditorScript(): string {
   }
 
   function closeEditor(){
+    if(!mdBody)return;
     var existing=mdBody.querySelector(".sm-comment-editor");
     if(existing)existing.remove();
     clearPending();
@@ -364,16 +375,27 @@ function commentEditorScript(): string {
   }
 
   function showEditor(commentId,beforeEl,startLine,endLine){
+    if(!mdBody)return;
     closeEditor();
     var editor=document.createElement("div");
     editor.className="sm-comment-editor";
     var isEdit=commentId!==null;
     var body="";
+    var placeholder="Add a comment...";
     if(isEdit){
       var card=mdBody.querySelector('.sm-comment[data-comment-id="'+commentId+'"]');
-      if(card)body=card.querySelector(".sm-comment-body").textContent.trim();
+      if(card){
+        var ph=card.getAttribute("data-placeholder");
+        if(ph)placeholder=ph;
+        var bodyEl=card.querySelector(".sm-comment-body");
+        // Skip the rendered placeholder paragraph — it isn't user content.
+        if(bodyEl&&!bodyEl.querySelector(".sm-comment-placeholder")){
+          body=bodyEl.textContent.trim();
+        }
+      }
     }
-    editor.innerHTML='<textarea placeholder="Add a comment...">'+body.replace(/</g,"&lt;")+'</textarea><div class="sm-comment-editor-actions">'
+    var phEsc=placeholder.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+    editor.innerHTML='<textarea placeholder="'+phEsc+'">'+body.replace(/</g,"&lt;")+'</textarea><div class="sm-comment-editor-actions">'
       +(isEdit?'<button class="sm-btn-delete">Delete</button>':'')
       +'<button class="sm-btn-cancel">Cancel</button><button class="sm-btn-save">'+(isEdit?"Save":"Add")+'</button></div>';
     beforeEl.parentNode.insertBefore(editor,beforeEl);
@@ -396,14 +418,82 @@ function commentEditorScript(): string {
     }
   }
 
-  // Click existing comment to edit
-  mdBody.addEventListener("click",function(e){
+  function initGripsAndGutter(){
+    mdBody=getMdBody();
+    if(!mdBody)return;
+
+    // Inject grip into each comment card (idempotent)
+    mdBody.querySelectorAll(".sm-comment").forEach(function(card){
+      if(!card.querySelector(".sm-comment-grip")){
+        card.insertAdjacentHTML("afterbegin",COMMENT_GRIP);
+      }
+    });
+
+    // (Re)attach gutter to current mdBody
+    if(!gutter||!mdBody.contains(gutter)){
+      gutter=document.createElement("div");
+      gutter.className="sm-gutter";
+      mdBody.appendChild(gutter);
+
+      gutter.addEventListener("mousemove",function(e){
+        if(selecting)return;
+        var block=getBlockAtY(e.clientY);
+        gutter.style.cursor=block?"crosshair":"";
+        showHoverBar(block);
+      });
+      gutter.addEventListener("mouseleave",function(){
+        gutter.style.cursor="";
+        if(!selecting)removeHoverBar();
+      });
+      gutter.addEventListener("mousedown",function(e){
+        var block=getBlockAtY(e.clientY);
+        if(!block)return;
+        selecting=true;
+        startEl=block;
+        endEl=block;
+        removeHoverBar();
+        selBar=document.createElement("div");
+        selBar.className="sm-gutter-selection";
+        mdBody.appendChild(selBar);
+        updateSelBar();
+        e.preventDefault();
+      });
+    }
+  }
+
+  // Persistent document-level listeners (survive content swaps)
+  document.addEventListener("mousemove",function(e){
+    if(!selecting)return;
+    var block=getBlockAtY(e.clientY);
+    if(block)endEl=block;
+    updateSelBar();
+  });
+
+  document.addEventListener("mouseup",function(){
+    if(!selecting)return;
+    selecting=false;
+    if(selBar){selBar.remove();selBar=null}
+    if(!startEl||!endEl)return;
+    var startLine=parseInt(startEl.getAttribute("data-source-line"));
+    var endLine=parseInt(endEl.getAttribute("data-source-line"));
+    if(startLine>endLine){var t=startLine;startLine=endLine;endLine=t;var te=startEl;startEl=endEl;endEl=te}
+    showEditor(null,startEl,startLine,endLine);
+    startEl=null;endEl=null;
+  });
+
+  // Delegate clicks on comment cards (works after live-reload swaps)
+  document.addEventListener("click",function(e){
     var card=e.target.closest(".sm-comment");
     if(!card)return;
+    if(!content.contains(card))return;
+    mdBody=getMdBody();
     var id=card.getAttribute("data-comment-id");
     showEditor(id,card,null,null);
   });
+
+  initGripsAndGutter();
   restoreScroll();
+  document.addEventListener("sm:content-updated",initGripsAndGutter);
 })();
 </script>`;
 }
@@ -421,7 +511,9 @@ function liveReloadScript(): string {
         .then(function(r){return r.text()})
         .then(function(html){
           var el=document.getElementById("content");
-          if(el)el.innerHTML=html;
+          if(!el)return;
+          el.innerHTML=html;
+          document.dispatchEvent(new CustomEvent("sm:content-updated"));
         });
     }
   };

@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { fencedLineIndices } from "./fence.js";
 
 const CHECKBOX_RE = /- \[([ x])\]/g;
 const TASK_LINE_RE = /^\s*- \[([ x])\]/;
@@ -91,11 +92,14 @@ interface CommentBlock {
 }
 
 function findCommentBlocks(lines: string[]): CommentBlock[] {
+  const fenced = fencedLineIndices(lines);
   const blocks: CommentBlock[] = [];
   for (let i = 0; i < lines.length; i++) {
+    if (fenced.has(i)) continue;
     if (lines[i].trim() === "{::comment}") {
       let separatorLine = -1;
       for (let j = i + 1; j < lines.length; j++) {
+        if (fenced.has(j)) continue;
         if (lines[j].trim() === "---" && separatorLine === -1) {
           separatorLine = j;
         }
