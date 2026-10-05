@@ -561,7 +561,7 @@ export function pageLayout(options: PageOptions): string {
 
   if (options.docsMode && options.sidebar) {
     return `${head}
-<body>
+<body class="docs-mode">
   <header class="page-header">
     <div class="page-header-left">
       <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">

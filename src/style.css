@@ -445,9 +445,18 @@ a:hover {
    Docs Mode Sidebar
    ============================================ */
 
+/* Fill whatever the header leaves instead of hardcoding its height; a stale
+   offset makes the body overflow and adds a second, outer scrollbar. */
+body.docs-mode {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .docs-layout {
   display: flex;
-  height: calc(100vh - 49px);
+  flex: 1;
+  min-height: 0;
 }
 
 .docs-sidebar {
